@@ -59,3 +59,25 @@ Feature: Tasks
     When I want close the task
     Then I want to reopen the task
     And I receive a 204 status code in response
+
+
+  @task_id
+  Scenario:  Verify that a task can be closed
+      As a user I want to close a task from TODOIST API
+    Given I set the base url and headers
+    When I want close the task
+    Then I receive a 204 status code in response
+
+
+  @task_id
+  Scenario: Verify POST task endpoint updates a task with the name provided
+     As a user I want to update a task from TODOIST API
+    Given I set the base url and headers
+    When I call to projects endpoint using "POST" method using the "update task data" as parameter
+    """
+    {
+      "content": "Task updated in feature",
+    }
+    """
+    Then I receive a 200 status code in response
+
