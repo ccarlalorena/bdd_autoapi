@@ -1,5 +1,5 @@
 """
-(c) Copyright Jalasoft. 2023
+(c) Copyright JalaSoft. 2023
 
 steps_todo.py
     step definitions for feature files
@@ -7,13 +7,14 @@ steps_todo.py
 import json
 import logging
 
-from behave import given, when, then, step, use_step_matcher
+from behave import given, when, then, step
 
 from utils.logger import get_logger
 from utils.rest_client import RestClient
 from utils.validate_response import ValidateResponse
 
 LOGGER = get_logger(__name__, logging.DEBUG)
+
 
 # use_step_matcher("re")
 
@@ -22,7 +23,7 @@ LOGGER = get_logger(__name__, logging.DEBUG)
 def step_set_base_url(context):
     LOGGER.debug("HEADERS: %s", context.headers)
     LOGGER.debug("URL: %s", context.url)
-  
+
 
 @then('I receive a {status_code:d} status code in response')
 def step_verify_status_code(context, status_code):
@@ -30,7 +31,8 @@ def step_verify_status_code(context, status_code):
     LOGGER.debug("Status code param: %s", type(status_code))
     LOGGER.debug("Status code response: %s", type(context.response["status"]))
     context.status_code = status_code
-    assert int(status_code) == context.response["status"], " Expected 200 but received " + str(context.response["status"])
+    assert int(status_code) == context.response["status"], " Expected 200 but received " + str(
+        context.response["status"])
 
 
 # @step(u'I call to projects endpoint using "(\\w*)" method( using the "([\\w\\s]*)" as parameter)*')
@@ -47,18 +49,10 @@ def step_call_endpoint(context, feature, method_name, param):
             data = get_data_by_feature(context)
     elif method_name == "DELETE" or (method_name == "GET" and param != "None"):
         url = get_url_by_feature(context)
-    # if context.table:
-    #     LOGGER.debug("Table: %s", context.table)
-    #     index = 0
-    #     for table in context.table:
-    #         LOGGER.debug("row: %s", table[index])
-    #         index += 1
 
-    # update the url with resources id created
-
-    response = RestClient().send_request(method_name=method_name.lower(), 
+    response = RestClient().send_request(method_name=method_name.lower(),
                                          session=context.session,
-                                         url=url, 
+                                         url=url,
                                          headers=context.headers,
                                          data=data)
 
@@ -93,6 +87,8 @@ def get_url_by_feature(context):
         feature_id = context.section_id
     elif context.feature_name == "tasks":
         feature_id = context.task_id
+    elif context.feature_name == "labels":
+        feature_id = context.label_id
 
     url = f"{context.url}{context.feature_name}/{feature_id}"
 
@@ -109,6 +105,10 @@ def append_to_resources_list(context, response):
         context.project_list.append(response["body"]["id"])
     if context.feature_name == "sections":
         context.section_list.append(response["body"]["id"])
+    if context.feature_name == "tasks":
+        context.task_list.append(response["body"]["id"])
+    if context.feature_name == "labels":
+        context.label_list.append(response["body"]["id"])
 
 
 def get_data_by_feature(context):
@@ -117,14 +117,21 @@ def get_data_by_feature(context):
     if context.feature_name == "projects":
         if "project_id" in dictionary:
             dictionary["project_id"] = context.project_id
+
     if context.feature_name == "sections":
         if "section_id" in dictionary:
             dictionary["section_id"] = context.section_id
         if "project_id" in dictionary:
             dictionary["project_id"] = context.project_id
+
     if context.feature_name == "tasks":
         if "project_id" in dictionary:
             dictionary["project_id"] = context.project_id
+
+    if context.feature_name == "labels":
+        if "label_id" in dictionary:
+            dictionary["label_id"] = context.label_id
+            dictionary["task_id"] = context.task_id
 
     LOGGER.debug("Dictionary created: %s", dictionary)
     return dictionary
@@ -137,10 +144,11 @@ def step_impl(context):
     """
     task_id = context.task_id
     url_close_task = f"{context.url}tasks/{task_id}/close"
-    response = RestClient().send_request(method_name="post", session=context.session,
+    response_close = RestClient().send_request(method_name="post", session=context.session,
                                          headers=context.headers, url=url_close_task)
 
-    assert response["status"] == 204
+    assert response_close["status"] == 204
+    context.response = response_close
 
 
 @then("I want to reopen the task")

@@ -5,6 +5,7 @@ environment.py
     file with all fixture methods for feature and step files
 """
 import logging
+import random
 
 import requests
 
@@ -25,17 +26,22 @@ def before_all(context):
     context.project_list = []
     context.section_list = []
     context.task_list = []
+    context.comment_list = []
+    context.label_list = []
+    context.project_id_from_all = []
     context.resource_list = {
         "projects": [],
         "sections": [],
-        "tasks": []
+        "tasks": [],
+        "comments": [],
+        "labels": []
     }
 
     context.url = BASE_URL
     LOGGER.debug("Headers before feature: %s", context.headers)
     projects = get_all_projects(context)
     LOGGER.debug(projects)
-    context.project_id_from_all = projects["body"][1]["id"]
+    # context.project_id_from_all = projects["body"][1]["id"]
 
 
 def before_feature(context, feature):
@@ -54,14 +60,12 @@ def before_scenario(context, scenario):
     LOGGER.debug("Scenario Name: %s", scenario.name)
 
     if "project_id" in scenario.tags:
-
         response = create_project(context=context, name_project="project x")
         context.project_id = response["body"]["id"]
         LOGGER.debug("Project id created: %s", context.project_id)
         context.resource_list["projects"].append(context.project_id)
 
     if "section_id" in scenario.tags:
-
         response = create_section(context=context, project_id=context.project_id_from_all,
                                   section_name="section x")
         context.section_id = response["body"]["id"]
@@ -69,11 +73,16 @@ def before_scenario(context, scenario):
         context.resource_list["sections"].append(context.section_id)
 
     if "task_id" in scenario.tags:
-
         response = create_task(context=context)
         context.task_id = response["body"]["id"]
         LOGGER.debug("Task id created: %s", context.task_id)
         context.resource_list["tasks"].append(context.task_id)
+
+    if "label_id" in scenario.tags:
+        response = create_label(context=context)
+        context.label_id = response["body"]["id"]
+        LOGGER.debug("Label id created: %s", context.label_id)
+        context.resource_list["labels"].append(context.label_id)
 
 
 def after_scenario(context, scenario):
@@ -98,24 +107,22 @@ def after_all(context):
 
 
 def create_project(context, name_project):
-
     body_project = {
         "name": name_project
     }
     response = RestClient().send_request(method_name="post", session=context.session,
-                                         url=context.url+"projects", headers=context.headers,
+                                         url=context.url + "projects", headers=context.headers,
                                          data=body_project)
     return response
 
 
 def create_section(context, project_id, section_name):
-
     body_section = {
         "project_id": project_id,
         "name": section_name
     }
     response = RestClient().send_request(method_name="post", session=context.session,
-                                         url=context.url+"sections", headers=context.headers,
+                                         url=context.url + "sections", headers=context.headers,
                                          data=body_section)
     return response
 
@@ -146,5 +153,34 @@ def create_task(context, project_id=None, section_id=None):
 
     response = RestClient().send_request(method_name="post", session=context.session, headers=context.headers,
                                          url=context.url + "tasks", data=data)
+
+    return response
+
+
+def create_label(context):
+    data = {
+        "name": "Food4",
+        "color": "charcoal2",
+        "order": 1,
+        "is_favorite": "false"
+    }
+    response = RestClient().send_request(method_name="post", session=context.session, headers=context.headers,
+                                         url=context.url + "labels", data=data)
+    # context.append_to_resources_list(response)
+
+    return response
+
+
+def create_comment(context, content, task_id):
+    """
+    Creates Comment
+    """
+    data = {
+        "task_id": task_id,
+        "content": content
+    }
+    response = RestClient().send_request(method_name="post", session=context.session, headers=context.headers,
+                                         url=context.url + "comments", data=data)
+    # context.append_to_resources_list(response)
 
     return response
