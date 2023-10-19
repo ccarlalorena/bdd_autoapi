@@ -78,6 +78,12 @@ def before_scenario(context, scenario):
         LOGGER.debug("Task id created: %s", context.task_id)
         context.resource_list["tasks"].append(context.task_id)
 
+    if "comment_id" in scenario.tags:
+        response = create_comment(context=context, project_id=context.project_id_from_all, comment_name="comment x")
+        context.comment_id = response["body"]["id"]
+        LOGGER.debug("Comment id created: %s", context.comment_id)
+        context.resource_list["comments"].append(context.comment_id)
+
     if "label_id" in scenario.tags:
         response = create_label(context=context)
         context.label_id = response["body"]["id"]
@@ -107,6 +113,12 @@ def after_all(context):
 
 
 def create_project(context, name_project):
+    """
+    Method to create a Project
+    :param context:
+    :param name_project:
+    :return:
+    """
     body_project = {
         "name": name_project
     }
@@ -117,6 +129,14 @@ def create_project(context, name_project):
 
 
 def create_section(context, project_id, section_name):
+    """
+    Method to create a section.
+    :param context:
+    :param project_id:
+    :param section_name:
+    :return:
+    """
+
     body_section = {
         "project_id": project_id,
         "name": section_name
@@ -140,6 +160,13 @@ def get_all_projects(context):
 
 
 def create_task(context, project_id=None, section_id=None):
+    """
+    Method to create a task
+    :param context:
+    :param project_id:
+    :param section_id:
+    :return:
+    """
     data = {
         "content": "Task created in feature",
         "due_string": "tomorrow at 11:00",
@@ -158,8 +185,14 @@ def create_task(context, project_id=None, section_id=None):
 
 
 def create_label(context):
+    """
+    Method to create a Label
+    :param context:
+    :param label_id:
+    :return:
+    """
     data = {
-        "name": "Food4",
+        "name": "Food5",
         "color": "charcoal2",
         "order": 1,
         "is_favorite": "false"
@@ -171,13 +204,18 @@ def create_label(context):
     return response
 
 
-def create_comment(context, content, task_id):
+def create_comment(context, project_id, comment_name):
     """
-    Creates Comment
+    Method to create a Comment
+    :param context:
+    :param content:
+    :param task_id:
+    :return:
     """
     data = {
-        "task_id": task_id,
-        "content": content
+        "project_id": project_id,
+        "comment": comment_name,
+
     }
     response = RestClient().send_request(method_name="post", session=context.session, headers=context.headers,
                                          url=context.url + "comments", data=data)
