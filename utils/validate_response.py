@@ -14,19 +14,19 @@ class ValidateResponse(metaclass=Singleton):
     def validate_response(self, actual_response, method=None, expected_status_code=200, feature=None, option="file"):
         # validate json file
         input_data = {}
-        # if option == "file":
-        #     file_name = f"{ABS_PATH}/input_data/{feature}_{method}_{expected_status_code}.json"
-        #     input_data = self.get_input_data_from_json(file_name)
-        # else:
-        #     # validate db
-        #     name = (f"{feature}_{method}_{expected_status_code}", )
-        #     mysql_connect = MYSQLConnector()
-        #     query = "SELECT * FROM todo_data.input_data where name = %s;"
-        #     res = mysql_connect.execute_query(query, param=name)
-        #     if res:
-        #         json_file = res[0][1]
-        #         input_data = json.loads(json_file)
-        #         LOGGER.debug("Input Data from DB: %s", input_data)
+        if option == "file":
+            file_name = f"{ABS_PATH}/input_data/{feature}_{method}_{expected_status_code}.json"
+            input_data = self.get_input_data_from_json(file_name)
+        #else:
+            # validate db
+            # name = (f"{feature}_{method}_{expected_status_code}", )
+            # mysql_connect = MYSQLConnector()
+            # query = "SELECT * FROM todo_data.input_data where name = %s;"
+            # res = mysql_connect.execute_query(query, param=name)
+            # if res:
+            #     json_file = res[0][1]
+            #     input_data = json.loads(json_file)
+            #     LOGGER.debug("Input Data from DB: %s", input_data)
 
         if 'body' in actual_response and actual_response["body"] is not None:
             # compare actual with input data

@@ -5,11 +5,13 @@ environment.py
     file with all fixture methods for feature and step files
 """
 import logging
-import random
 
 import requests
+# from influxdb_client import Point
+# from influxdb_client.client.write_api import SYNCHRONOUS
 
 from config.config import BASE_URL, HEADERS
+# from utils.influx import get_influx
 from utils.logger import get_logger
 from utils.rest_client import RestClient
 
@@ -27,21 +29,12 @@ def before_all(context):
     context.section_list = []
     context.task_list = []
     context.comment_list = []
-    context.label_list = []
-    context.project_id_from_all = []
-    context.resource_list = {
-        "projects": [],
-        "sections": [],
-        "tasks": [],
-        "comments": [],
-        "labels": []
-    }
 
     context.url = BASE_URL
     LOGGER.debug("Headers before feature: %s", context.headers)
     projects = get_all_projects(context)
     LOGGER.debug(projects)
-    # context.project_id_from_all = projects["body"][1]["id"]
+    context.project_id_from_all = projects["body"][1]["id"]
 
 
 def before_feature(context, feature):
@@ -51,21 +44,34 @@ def before_feature(context, feature):
     :param feature:     object      Contains feature information
     """
     LOGGER.debug("Before feature")
+    # cleanup lists
+    context.resource_list = {
+        "tasks": [],
+        "sections": [],
+        "projects": [],
+        "comments": []
+    }
     context.feature_name = feature.name.lower()
-    # context.url = BASE_URL + feature.name.lower()
 
 
 def before_scenario(context, scenario):
+    """
+    Method to be called before scenario
+    :param context:
+    :param scenario:
+    """
     LOGGER.debug("Scenario tags: %s", scenario.tags)
     LOGGER.debug("Scenario Name: %s", scenario.name)
 
     if "project_id" in scenario.tags:
+
         response = create_project(context=context, name_project="project x")
         context.project_id = response["body"]["id"]
         LOGGER.debug("Project id created: %s", context.project_id)
         context.resource_list["projects"].append(context.project_id)
 
     if "section_id" in scenario.tags:
+
         response = create_section(context=context, project_id=context.project_id_from_all,
                                   section_name="section x")
         context.section_id = response["body"]["id"]
@@ -73,48 +79,63 @@ def before_scenario(context, scenario):
         context.resource_list["sections"].append(context.section_id)
 
     if "task_id" in scenario.tags:
+
         response = create_task(context=context)
         context.task_id = response["body"]["id"]
         LOGGER.debug("Task id created: %s", context.task_id)
         context.resource_list["tasks"].append(context.task_id)
 
     if "comment_id" in scenario.tags:
-        response = create_comment(context=context, project_id=context.project_id_from_all, comment_name="comment x")
-        context.comment_id = response["body"]["id"]
-        LOGGER.debug("Comment id created: %s", context.comment_id)
-        context.resource_list["comments"].append(context.comment_id)
 
-    if "label_id" in scenario.tags:
-        response = create_label(context=context)
-        context.label_id = response["body"]["id"]
-        LOGGER.debug("Label id created: %s", context.label_id)
-        context.resource_list["labels"].append(context.label_id)
+        response = create_comment(context=context, content="content X", task_id=context.task_id)
+        context.task_id = response["body"]["id"]
+        LOGGER.debug("Comment id created: %s", context.task_id)
+        context.resource_list["comments"].append(context.task_id)
 
 
 def after_scenario(context, scenario):
-    print("after scenario")
+    """
+    Method to execute instructions after scenario
+    :param context:
+    :param scenario:
+    :return:
+    """
+    # client = get_influx()
+    # write_api = client.write_api(write_options=SYNCHRONOUS)
+    # bucket = "todo_bucket"
+    # LOGGER.debug("after scenario")
+    # p = (Point("test_case_execution").tag("id_tc", scenario.tags)
+    #      .tag("feature", context.feature_name)
+    #      .tag("test_case_name", scenario.name)
+    #      .tag("status", scenario.status)
+    #      .field("duration", scenario.duration)
+    #      )
+    # write_api.write(bucket=bucket, record=p)
 
 
 def after_feature(context, feature):
-    print("After feature")
+    """
+    Method to execute instructions after feature
+    :param context:
+    :param feature:
+    :return:
+    """
+    LOGGER.debug("After feature")
+    delete_resources(context)
 
 
-def after_all(context):
-    LOGGER.debug("After all")
-    LOGGER.debug("Resources: %s", context.resource_list)
-    for resource in context.resource_list:
-        LOGGER.debug("Resource: %s", resource)
-        for r in context.resource_list[resource]:
-            # i.e https://api.todoist.com/rest/v2/ projects / project_id
-            url = f"{context.url}{resource}/{r}"
-            RestClient().send_request(method_name="delete", session=context.session,
-                                      url=url, headers=context.headers)
-            LOGGER.info("Deleting %s: %s", resource, r)
+# def after_all(context):
+#     """
+#     Method to execute instructions after all features
+#     :param context:
+#     :return:
+#     """
+#     LOGGER.debug("After all")
 
 
 def create_project(context, name_project):
     """
-    Method to create a Project
+    Method to create project
     :param context:
     :param name_project:
     :return:
@@ -123,26 +144,25 @@ def create_project(context, name_project):
         "name": name_project
     }
     response = RestClient().send_request(method_name="post", session=context.session,
-                                         url=context.url + "projects", headers=context.headers,
+                                         url=context.url+"projects", headers=context.headers,
                                          data=body_project)
     return response
 
 
 def create_section(context, project_id, section_name):
     """
-    Method to create a section.
+    Method to create section
     :param context:
     :param project_id:
     :param section_name:
     :return:
     """
-
     body_section = {
         "project_id": project_id,
         "name": section_name
     }
     response = RestClient().send_request(method_name="post", session=context.session,
-                                         url=context.url + "sections", headers=context.headers,
+                                         url=context.url+"sections", headers=context.headers,
                                          data=body_section)
     return response
 
@@ -178,47 +198,40 @@ def create_task(context, project_id=None, section_id=None):
     if section_id:
         data["section_id"] = section_id
 
-    response = RestClient().send_request(method_name="post", session=context.session, headers=context.headers,
+    response = RestClient().send_request(method_name="post", session=context.session,
+                                         headers=context.headers,
                                          url=context.url + "tasks", data=data)
 
     return response
 
 
-def create_label(context):
+def create_comment(context, content, task_id):
     """
-    Method to create a Label
+    Method to create a task
     :param context:
-    :param label_id:
     :return:
     """
     data = {
-        "name": "Food5",
-        "color": "charcoal2",
-        "order": 1,
-        "is_favorite": "false"
+        "task_id": task_id,
+        "content": content
     }
-    response = RestClient().send_request(method_name="post", session=context.session, headers=context.headers,
-                                         url=context.url + "labels", data=data)
-    # context.append_to_resources_list(response)
+    if task_id:
+        data["project_id"] = task_id
 
-    return response
-
-
-def create_comment(context, project_id, comment_name):
-    """
-    Method to create a Comment
-    :param context:
-    :param content:
-    :param task_id:
-    :return:
-    """
-    data = {
-        "project_id": project_id,
-        "comment": comment_name,
-
-    }
-    response = RestClient().send_request(method_name="post", session=context.session, headers=context.headers,
+    response = RestClient().send_request(method_name="post", session=context.session,
+                                         headers=context.headers,
                                          url=context.url + "comments", data=data)
-    # context.append_to_resources_list(response)
 
     return response
+
+
+def delete_resources(context):
+    LOGGER.debug("Resources: %s", context.resource_list)
+    for resource in context.resource_list:
+        LOGGER.debug("Resource: %s", resource)
+        for res in context.resource_list[resource]:
+            # i.e https://api.todoist.com/rest/v2/ projects / project_id
+            url = f"{context.url}{resource}/{res}"
+            RestClient().send_request(method_name="delete", session=context.session,
+                                      url=url, headers=context.headers)
+            LOGGER.info("Deleting %s: %s", resource, res)

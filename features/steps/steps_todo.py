@@ -1,5 +1,5 @@
 """
-(c) Copyright JalaSoft. 2023
+(c) Copyright Jalasoft. 2023
 
 steps_todo.py
     step definitions for feature files
@@ -7,7 +7,7 @@ steps_todo.py
 import json
 import logging
 
-from behave import given, when, then, step
+from behave import given, when, then, step, use_step_matcher
 
 from utils.logger import get_logger
 from utils.rest_client import RestClient
@@ -88,9 +88,7 @@ def get_url_by_feature(context):
     elif context.feature_name == "tasks":
         feature_id = context.task_id
     elif context.feature_name == "comments":
-        feature_id = context.comment_id
-    elif context.feature_name == "labels":
-        feature_id = context.label_id
+        feature_id = context.task_id
 
     url = f"{context.url}{context.feature_name}/{feature_id}"
 
@@ -107,12 +105,10 @@ def append_to_resources_list(context, response):
         context.project_list.append(response["body"]["id"])
     if context.feature_name == "sections":
         context.section_list.append(response["body"]["id"])
-    if context.feature_name == "tasks":
-        context.task_list.append(response["body"]["id"])
     if context.feature_name == "comments":
-        context.label_list.append(response["body"]["id"])
-    if context.feature_name == "labels":
-        context.label_list.append(response["body"]["id"])
+        context.section_list.append(response["body"]["id"])
+    if context.feature_name == "tasks":
+        context.section_list.append(response["body"]["id"])
 
 
 def get_data_by_feature(context):
@@ -121,24 +117,21 @@ def get_data_by_feature(context):
     if context.feature_name == "projects":
         if "project_id" in dictionary:
             dictionary["project_id"] = context.project_id
-    elif context.feature_name == "sections":
+    if context.feature_name == "sections":
         if "section_id" in dictionary:
             dictionary["section_id"] = context.section_id
         if "project_id" in dictionary:
             dictionary["project_id"] = context.project_id
-    elif context.feature_name == "tasks":
+    if context.feature_name == "tasks":
         if "project_id" in dictionary:
             dictionary["project_id"] = context.project_id
-    elif context.feature_name == "comments":
+    if context.feature_name == "comments":
         if "comment_id" in dictionary:
             dictionary["comment_id"] = context.comment_id
-        if "project_id" in dictionary:
-            dictionary["project_id"] = context.project_id
         if "task_id" in dictionary:
             dictionary["task_id"] = context.task_id
-    elif context.feature_name == "labels":
-        if "label_id" in dictionary:
-            dictionary["label_id"] = context.label_id
+        if "project_id" in dictionary:
+            dictionary["project_id"] = context.project_id
 
     LOGGER.debug("Dictionary created: %s", dictionary)
     return dictionary
@@ -151,11 +144,10 @@ def step_impl(context):
     """
     task_id = context.task_id
     url_close_task = f"{context.url}tasks/{task_id}/close"
-    response_close = RestClient().send_request(method_name="post", session=context.session,
-                                               headers=context.headers, url=url_close_task)
+    response = RestClient().send_request(method_name="post", session=context.session,
+                                         headers=context.headers, url=url_close_task)
 
-    assert response_close["status"] == 204
-    context.response = response_close
+    assert response["status"] == 204
 
 
 @then("I want to reopen the task")
